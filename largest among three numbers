@@ -1,0 +1,12 @@
+//largest among three numbers using unary operators
+
+#include <stdio.h>
+
+int main()
+{
+  int a,b,c,max;
+  printf("enter the numbers\n");
+  scanf("%d\n%d\n%d",&a,&b,&c);
+  max=(a>b)?((a>c)?a:c):((b>c)?b:c);
+  printf("the largest number is %d ",max);
+}
