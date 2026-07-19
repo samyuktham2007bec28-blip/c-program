@@ -1,0 +1,16 @@
+//swap two numbers using temporary variable
+#include <stdio.h>
+
+int main()
+{
+    int a,b,temp;
+    printf("enter the number a\n");
+    scanf("%d",&a);
+    printf("enter the number b\n");
+    scanf("%d",&b);
+    temp=a;
+    a=b;
+    b=temp;
+    printf("after swapped\na=%d \nb=%d",a,b);
+    return 0;
+}
