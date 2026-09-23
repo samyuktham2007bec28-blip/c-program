@@ -1,0 +1,80 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#define ANAGRAM_HASH_SIZE 2048
+int compareChars(const void* a, const void* b) {
+    return (*(char*)a - *(char*)b);
+}
+typedef struct HashNode {
+    char* sortedKey;             
+    char** originalStrings;      
+    int count;                   
+    int capacity;               
+    struct HashNode* next;      
+} HashNode;
+unsigned int getHash(const char* str) {
+    unsigned int hash = 5381;
+    int c;
+    while ((c = *str++)) {
+        hash = ((hash << 5) + hash) + c; 
+    }
+    return hash % ANAGRAM_HASH_SIZE;
+}
+char*** groupAnagrams(char** strs, int strsSize, int* returnSize, int** returnColumnSizes) {
+    HashNode** hashMap = (HashNode**)calloc(ANAGRAM_HASH_SIZE, sizeof(HashNode*));
+    int distinctGroupsCount = 0;
+    for (int i = 0; i < strsSize; i++) {
+        int len = strlen(strs[i]);
+        char* sortedKey = (char*)malloc((len + 1) * sizeof(char));
+        strcpy(sortedKey, strs[i]);
+        qsort(sortedKey, len, sizeof(char), compareChars);
+        unsigned int hashIndex = getHash(sortedKey);
+        HashNode* curr = hashMap[hashIndex];
+        bool found = false;
+        while (curr != NULL) {
+            if (strcmp(curr->sortedKey, sortedKey) == 0) {
+                found = true;
+                break;
+            }
+            curr = curr->next;
+        }
+        if (found) {
+            if (curr->count >= curr->capacity) {
+                curr->capacity *= 2;
+                curr->originalStrings = (char**)realloc(curr->originalStrings, curr->capacity * sizeof(char*));
+            }
+            curr->originalStrings[curr->count++] = strs[i];
+            free(sortedKey); 
+        } else {
+            HashNode* newNode = (HashNode*)malloc(sizeof(HashNode));
+            newNode->sortedKey = sortedKey;
+            newNode->capacity = 4;
+            newNode->originalStrings = (char**)malloc(newNode->capacity * sizeof(char*));
+            newNode->originalStrings[0] = strs[i]; 
+            newNode->count = 1;
+            newNode->next = hashMap[hashIndex];
+            hashMap[hashIndex] = newNode;
+            distinctGroupsCount++;
+        }
+    }
+    char*** result = (char***)malloc(distinctGroupsCount * sizeof(char**));
+    *returnColumnSizes = (int*)malloc(distinctGroupsCount * sizeof(int));
+    *returnSize = distinctGroupsCount;
+    int resultIdx = 0;
+    for (int i = 0; i < ANAGRAM_HASH_SIZE; i++) {
+        HashNode* curr = hashMap[i];
+        while (curr != NULL) {
+            result[resultIdx] = curr->originalStrings;
+            (*returnColumnSizes)[resultIdx] = curr->count;
+            resultIdx++;
+            HashNode* temp = curr;
+            curr = curr->next;
+            free(temp->sortedKey);
+            free(temp);
+        }
+    }
+    free(hashMap);
+
+    return result;
+}
