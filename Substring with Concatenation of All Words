@@ -1,0 +1,99 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+typedef struct TrieNode {
+    struct TrieNode* children[26];
+    int word_id; 
+} TrieNode;
+TrieNode* createNode() {
+    TrieNode* node = (TrieNode*)malloc(sizeof(TrieNode));
+    node->word_id = -1;
+    for (int i = 0; i < 26; i++) {
+        node->children[i] = NULL;
+    }
+    return node;
+}
+void insertTrie(TrieNode* root, const char* word, int id) {
+    TrieNode* curr = root;
+    while (*word) {
+        int idx = *word - 'a';
+        if (!curr->children[idx]) {
+            curr->children[idx] = createNode();
+        }
+        curr = curr->children[idx];
+        word++;
+    }
+    curr->word_id = id;
+}
+int searchTrie(TrieNode* root, const char* str, int len) {
+    TrieNode* curr = root;
+    for (int i = 0; i < len; i++) {
+        int idx = str[i] - 'a';
+        if (!curr->children[idx]) return -1;
+        curr = curr->children[idx];
+    }
+    return curr->word_id;
+}
+void freeTrie(TrieNode* root) {
+    if (!root) return;
+    for (int i = 0; i < 26; i++) {
+        if (root->children[i]) {
+            freeTrie(root->children[i]);
+        }
+    }
+    free(root);
+}
+int* findSubstring(char* s, char** words, int wordsSize, int* returnSize) {
+    *returnSize = 0;
+    if (!s || wordsSize == 0) return NULL;
+    int s_len = strlen(s);
+    int word_len = strlen(words[0]);
+    int total_len = word_len * wordsSize;
+    if (s_len < total_len) return NULL;
+    int* result = (int*)malloc(sizeof(int) * s_len);
+    TrieNode* root = createNode();
+    int* target_counts = (int*)calloc(wordsSize, sizeof(int));
+    int unique_word_count = 0;
+    for (int i = 0; i < wordsSize; i++) {
+        int id = searchTrie(root, words[i], word_len);
+        if (id == -1) {
+            insertTrie(root, words[i], unique_word_count);
+            id = unique_word_count;
+            unique_word_count++;
+        }
+        target_counts[id]++;
+    }
+    int* current_counts = (int*)malloc(sizeof(int) * unique_word_count);
+    for (int i = 0; i < word_len; i++) {
+        int left = i;
+        int right = i;
+        int count = 0;
+        memset(current_counts, 0, sizeof(int) * unique_word_count);
+        while (right + word_len <= s_len) {
+            int w_id = searchTrie(root, s + right, word_len);
+            right += word_len;
+
+            if (w_id != -1) {
+                current_counts[w_id]++;
+                count++;
+                while (current_counts[w_id] > target_counts[w_id]) {
+                    int left_w_id = searchTrie(root, s + left, word_len);
+                    current_counts[left_w_id]--;
+                    left += word_len;
+                    count--;
+                }
+                if (count == wordsSize) {
+                    result[(*returnSize)++] = left;
+                }
+            } else {
+                memset(current_counts, 0, sizeof(int) * unique_word_count);
+                count = 0;
+                left = right;
+            }
+        }
+    }
+    freeTrie(root);
+    free(target_counts);
+    free(current_counts);
+    return result;
+}
