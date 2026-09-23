@@ -1,0 +1,109 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#define HASH_SIZE 30011
+typedef struct {
+    char* word;
+    int index;
+    bool used;
+} HashEntry;
+unsigned int hashString(const char* str) {
+    unsigned int hash = 5381;
+    int c;
+    while ((c = *str++)) {
+        hash = ((hash << 5) + hash) + c;
+    }
+    return hash % HASH_SIZE;
+}
+void hashInsert(HashEntry* table, const char* word, int index) {
+    unsigned int h = hashString(word);
+    while (table[h].used) {
+        h = (h + 1) % HASH_SIZE;
+    }
+    table[h].word = strdup(word);
+    table[h].index = index;
+    table[h].used = true;
+}
+int hashSearch(HashEntry* table, const char* word) {
+    unsigned int h = hashString(word);
+    while (table[h].used) {
+        if (strcmp(table[h].word, word) == 0) {
+            return table[h].index;
+        }
+        h = (h + 1) % HASH_SIZE;
+    }
+    return -1;
+}
+bool isPalindrome(const char* s, int start, int end) {
+    while (start < end) {
+        if (s[start] != s[end]) return false;
+        start++;
+        end--;
+    }
+    return true;
+}
+void reverseStr(const char* s, int start, int end, char* out) {
+    int len = end - start + 1;
+    if (len < 0) len = 0;
+    for (int i = 0; i < len; i++) {
+        out[i] = s[end - i];
+    }
+    out[len] = '\0';
+}
+int** palindromePairs(char** words, int wordsSize, int* returnSize, int** returnColumnSizes) {
+    HashEntry* table = (HashEntry*)calloc(HASH_SIZE, sizeof(HashEntry));
+    for (int i = 0; i < wordsSize; i++) {
+        hashInsert(table, words[i], i);
+    }
+    int capacity = 128;
+    int** res = (int**)malloc(capacity * sizeof(int*));
+    *returnSize = 0;
+    char s1_rev[305];
+    char s2_rev[305];
+    for (int i = 0; i < wordsSize; i++) {
+        int len = strlen(words[i]);
+        for (int j = 0; j <= len; j++) {
+            if (isPalindrome(words[i], 0, j - 1)) {
+                reverseStr(words[i], j, len - 1, s2_rev);
+                int targetIdx = hashSearch(table, s2_rev);
+                if (targetIdx != -1 && targetIdx != i) {
+                    if (*returnSize >= capacity) {
+                        capacity *= 2;
+                        res = (int**)realloc(res, capacity * sizeof(int*));
+                    }
+                    res[*returnSize] = (int*)malloc(2 * sizeof(int));
+                    res[*returnSize][0] = targetIdx;
+                    res[*returnSize][1] = i;
+                    (*returnSize)++;
+                }
+            }
+            if (j < len && isPalindrome(words[i], j, len - 1)) {
+                reverseStr(words[i], 0, j - 1, s1_rev);
+                int targetIdx = hashSearch(table, s1_rev);
+                if (targetIdx != -1 && targetIdx != i) {
+                    if (*returnSize >= capacity) {
+                        capacity *= 2;
+                        res = (int**)realloc(res, capacity * sizeof(int*));
+                    }
+                    res[*returnSize] = (int*)malloc(2 * sizeof(int));
+                    res[*returnSize][0] = i;
+                    res[*returnSize][1] = targetIdx;
+                    (*returnSize)++;
+                }
+            }
+        }
+    }
+
+    *returnColumnSizes = (int*)malloc((*returnSize) * sizeof(int));
+    for (int i = 0; i < *returnSize; i++) {
+        (*returnColumnSizes)[i] = 2;
+    }
+
+    for (int i = 0; i < HASH_SIZE; i++) {
+        if (table[i].used) free(table[i].word);
+    }
+    free(table);
+
+    return res;
+}
