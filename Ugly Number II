@@ -1,0 +1,24 @@
+#include <stdio.h>
+#include <stdlib.h>
+int min(int a, int b, int c) {
+    int m = a < b ? a : b;
+    return m < c ? m : c;
+}
+int nthUglyNumber(int n) {
+    int* ugly = (int*)malloc(n * sizeof(int));
+    ugly[0] = 1; 
+    int p2 = 0, p3 = 0, p5 = 0;
+    for (int i = 1; i < n; i++) {
+        int next2 = ugly[p2] * 2;
+        int next3 = ugly[p3] * 3;
+        int next5 = ugly[p5] * 5;
+        int nextUgly = min(next2, next3, next5);
+        ugly[i] = nextUgly;
+        if (nextUgly == next2) p2++;
+        if (nextUgly == next3) p3++;
+        if (nextUgly == next5) p5++;
+    }
+    int result = ugly[n - 1];
+    free(ugly); 
+    return result;
+}
