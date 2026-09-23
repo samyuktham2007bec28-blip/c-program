@@ -1,0 +1,79 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#define MAX_WORDS 5002
+typedef struct {
+    int wordIdx;
+} QueueItem;
+bool isAdjacent(const char* a, const char* b, int len) {
+    int diff = 0;
+    for (int i = 0; i < len; i++) {
+        if (a[i] != b[i]) {
+            diff++;
+            if (diff > 1) return false;
+        }
+    }
+    return diff == 1;
+}
+int ladderLength(char* beginWord, char* endWord, char** wordList, int wordListSize) {
+    int wordLen = strlen(beginWord);
+    int endIdx = -1;
+    for (int i = 0; i < wordListSize; i++) {
+        if (strcmp(wordList[i], endWord) == 0) {
+            endIdx = i;
+            break;
+        }
+    }
+    if (endIdx == -1) return 0;
+    int distBegin[MAX_WORDS];
+    int distEnd[MAX_WORDS];
+    for (int i = 0; i < wordListSize; i++) {
+        distBegin[i] = 0;
+        distEnd[i] = 0;
+    }
+    QueueItem qBegin[MAX_WORDS];
+    QueueItem qEnd[MAX_WORDS];
+    int headB = 0, tailB = 0;
+    int headE = 0, tailE = 0;
+    distEnd[endIdx] = 1;
+    qEnd[tailE++].wordIdx = endIdx;
+    for (int i = 0; i < wordListSize; i++) {
+        if (strcmp(wordList[i], beginWord) == 0) {
+            distBegin[i] = 1;
+            qBegin[tailB++].wordIdx = i;
+        } else if (isAdjacent(beginWord, wordList[i], wordLen)) {
+            if (distEnd[i] > 0) return 2;
+            distBegin[i] = 2;
+            qBegin[tailB++].wordIdx = i;
+        }
+    }
+    if (tailB == 0) return 0;
+    while (headB < tailB && headE < tailE) {
+        if ((tailB - headB) <= (tailE - headE)) {
+            int curr = qBegin[headB++].wordIdx;
+            for (int nxt = 0; nxt < wordListSize; nxt++) {
+                if (distBegin[nxt] == 0 && isAdjacent(wordList[curr], wordList[nxt], wordLen)) {
+                    if (distEnd[nxt] > 0) {
+                        return distBegin[curr] + distEnd[nxt];
+                    }
+                    distBegin[nxt] = distBegin[curr] + 1;
+                    qBegin[tailB++].wordIdx = nxt;
+                }
+            }
+        } else {
+            int curr = qEnd[headE++].wordIdx;
+            for (int nxt = 0; nxt < wordListSize; nxt++) {
+                if (distEnd[nxt] == 0 && isAdjacent(wordList[curr], wordList[nxt], wordLen)) {
+                    if (distBegin[nxt] > 0) {
+                        return distEnd[curr] + distBegin[nxt];
+                    }
+                    distEnd[nxt] = distEnd[curr] + 1;
+                    qEnd[tailE++].wordIdx = nxt;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
