@@ -1,0 +1,28 @@
+struct Node* visited[101];
+struct Node* dfs(struct Node* node) {
+    if (node == NULL) {
+        return NULL;
+    }
+    if (visited[node->val] != NULL) {
+        return visited[node->val];
+    }
+    struct Node* cloneNode = (struct Node*)malloc(sizeof(struct Node));
+    cloneNode->val = node->val;
+    cloneNode->numNeighbors = node->numNeighbors;
+    if (node->numNeighbors > 0) {
+        cloneNode->neighbors = (struct Node**)malloc(node->numNeighbors * sizeof(struct Node*));
+    } else {
+        cloneNode->neighbors = NULL;
+    }
+    visited[node->val] = cloneNode;
+    for (int i = 0; i < node->numNeighbors; i++) {
+        cloneNode->neighbors[i] = dfs(node->neighbors[i]);
+    }
+    return cloneNode;
+}
+struct Node* cloneGraph(struct Node* s) {
+    for (int i = 0; i <= 100; i++) {
+        visited[i] = NULL;
+    }
+    return dfs(s);
+}
