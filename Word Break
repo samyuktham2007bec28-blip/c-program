@@ -1,0 +1,36 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+bool matchesWord(const char* s, int start, int len, const char* word) {
+    if ((int)strlen(word) != len) {
+        return false;
+    }
+    return strncmp(s + start, word, len) == 0;
+}
+bool wordBreak(char* s, char** wordDict, int wordDictSize) {
+    int sLen = strlen(s);
+    bool* dp = (bool*)calloc(sLen + 1, sizeof(bool));
+    dp[0] = true; 
+    for (int i = 1; i <= sLen; i++) {
+        for (int j = 0; j < i; j++) {
+            if (i - j > 20) {
+                continue;
+            }
+            if (dp[j]) {
+                for (int k = 0; k < wordDictSize; k++) {
+                    if (matchesWord(s, j, i - j, wordDict[k])) {
+                        dp[i] = true;
+                    }
+                }
+                if (dp[i]) {
+                    break;
+                }
+            }
+        }
+    }
+
+    bool result = dp[sLen];
+    free(dp);
+    return result;
+}
