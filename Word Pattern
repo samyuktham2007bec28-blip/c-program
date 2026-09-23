@@ -1,0 +1,49 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+bool wordPattern(char* pattern, char* s) {
+    int patternLen = strlen(pattern);
+    char* sCopy = strdup(s);
+    char* char_to_word[26];
+    for (int i = 0; i < 26; i++) {
+        char_to_word[i] = NULL;
+    }
+    char* token = strtok(sCopy, " ");
+    int i = 0;
+    bool match = true;
+    while (token != NULL) {
+        if (i >= patternLen) {
+            match = false;
+            break;
+        }
+        int charIdx = pattern[i] - 'a';
+        if (char_to_word[charIdx] != NULL) {
+            if (strcmp(char_to_word[charIdx], token) != 0) {
+                match = false;
+                break;
+            }
+        } else {
+            for (int j = 0; j < 26; j++) {
+                if (char_to_word[j] != NULL && strcmp(char_to_word[j], token) == 0) {
+                    match = false;
+                    break;
+                }
+            }
+            if (!match) break;
+            char_to_word[charIdx] = strdup(token);
+        }
+        token = strtok(NULL, " ");
+        i++;
+    }
+    if (i != patternLen) {
+        match = false;
+    }
+    for (int j = 0; j < 26; j++) {
+        if (char_to_word[j] != NULL) {
+            free(char_to_word[j]);
+        }
+    }
+    free(sCopy);
+    return match;
+}
