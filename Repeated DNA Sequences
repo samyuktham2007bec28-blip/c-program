@@ -1,0 +1,42 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define HASH_CAPACITY 1048576
+int charToBits(char c) {
+    if (c == 'A') return 0;
+    if (c == 'C') return 1;
+    if (c == 'G') return 2;
+    return 3; // 'T'
+}
+char** findRepeatedDnaSequences(char* s, int* returnSize) {
+    int len = strlen(s);
+    *returnSize = 0;
+    if (len < 10) {
+        return NULL;
+    }
+    unsigned char* seen = (unsigned char*)calloc(HASH_CAPACITY, sizeof(unsigned char));
+    int capacity = 16;
+    char** result = (char**)malloc(capacity * sizeof(char*));
+    int currentMask = 0;
+    for (int i = 0; i < 9; i++) {
+        currentMask = (currentMask << 2) | charToBits(s[i]);
+    }
+    for (int i = 9; i < len; i++) {
+        currentMask = ((currentMask << 2) | charToBits(s[i])) & 0xFFFFF;
+        if (seen[currentMask] == 1) {
+            if (*returnSize >= capacity) {
+                capacity *= 2;
+                result = (char**)realloc(result, capacity * sizeof(char*));
+            }
+            result[*returnSize] = (char*)malloc(11 * sizeof(char));
+            strncpy(result[*returnSize], s + i - 9, 10);
+            result[*returnSize][10] = '\0';
+            (*returnSize)++;
+            seen[currentMask] = 2;
+        } else if (seen[currentMask] == 0) {
+            seen[currentMask] = 1;
+        }
+    }
+    free(seen);
+    return result;
+}
