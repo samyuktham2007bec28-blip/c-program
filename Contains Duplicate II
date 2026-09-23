@@ -1,0 +1,37 @@
+#include <stdbool.h>
+#include <stdlib.h>
+typedef struct {
+    int value;
+    int index;
+} NumWithIndex;
+int compare(const void* a, const void* b) {
+    NumWithIndex* numA = (NumWithIndex*)a;
+    NumWithIndex* numB = (NumWithIndex*)b;
+    if (numA->value < numB->value) return -1;
+    if (numA->value > numB->value) return 1;
+    if (numA->index < numB->index) return -1;
+    if (numA->index > numB->index) return 1;
+    return 0;
+}
+bool containsNearbyDuplicate(int* nums, int numsSize, int k) {
+    if (numsSize <= 1 || k <= 0) {
+        return false;
+    }
+    NumWithIndex* mappedArr = (NumWithIndex*)malloc(numsSize * sizeof(NumWithIndex));
+    for (int i = 0; i < numsSize; i++) {
+        mappedArr[i].value = nums[i];
+        mappedArr[i].index = i;
+    }
+    qsort(mappedArr, numsSize, sizeof(NumWithIndex), compare);
+    for (int i = 0; i < numsSize - 1; i++) {
+        if (mappedArr[i].value == mappedArr[i + 1].value) {
+            if (abs(mappedArr[i].index - mappedArr[i + 1].index) <= k) {
+                free(mappedArr);
+                return true;
+            }
+        }
+    }
+
+    free(mappedArr);
+    return false;
+}
