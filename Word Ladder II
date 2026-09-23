@@ -1,0 +1,129 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#define MAX_WORDS 502
+#define MAX_WORD_LEN 7
+typedef struct {
+    char*** paths;
+    int size;
+    int capacity;
+} ResultList;
+void addPath(ResultList* res, char** path, int len) {
+    if (res->size >= res->capacity) {
+        res->capacity = res->capacity == 0 ? 16 : res->capacity * 2;
+        res->paths = (char***)realloc(res->paths, res->capacity * sizeof(char**));
+    }
+    res->paths[res->size] = (char**)malloc(len * sizeof(char*));
+    for (int i = 0; i < len; i++) {
+        res->paths[res->size][i] = strdup(path[i]);
+    }
+    res->size++;
+}
+bool isAdjacent(const char* a, const char* b, int len) {
+    int diff = 0;
+    for (int i = 0; i < len; i++) {
+        if (a[i] != b[i]) {
+            diff++;
+            if (diff > 1) return false;
+        }
+    }
+    return diff == 1;
+}
+void backtrack(int currIdx, int beginIdx, char** fullWordList, int** parents, int* parentSizes, 
+               char** currentPath, int pathLen, ResultList* res) {
+    currentPath[pathLen] = fullWordList[currIdx];
+    if (currIdx == beginIdx) {
+        char** cleanPath = (char**)malloc((pathLen + 1) * sizeof(char*));
+        for (int i = 0; i <= pathLen; i++) {
+            cleanPath[i] = currentPath[pathLen - i];
+        }
+        addPath(res, cleanPath, pathLen + 1);
+        free(cleanPath);
+        return;
+    }
+    for (int i = 0; i < parentSizes[currIdx]; i++) {
+        backtrack(parents[currIdx][i], beginIdx, fullWordList, parents, parentSizes, currentPath, pathLen + 1, res);
+    }
+}
+char*** findLadders(char* beginWord, char* endWord, char** wordList, int wordListSize, int* returnSize, int** returnColumnSizes) {
+    int wordLen = strlen(beginWord);
+    char* fullWordList[MAX_WORDS];
+    fullWordList[0] = beginWord;
+    int endIdx = -1;
+    int totalWords = 1;
+    for (int i = 0; i < wordListSize; i++) {
+        if (strcmp(wordList[i], beginWord) == 0) continue;
+        fullWordList[totalWords] = wordList[i];
+        if (strcmp(wordList[i], endWord) == 0) {
+            endIdx = totalWords;
+        }
+        totalWords++;
+    }
+    if (endIdx == -1) {
+        *returnSize = 0;
+        *returnColumnSizes = NULL;
+        return NULL;
+    }
+    int dist[MAX_WORDS];
+    for (int i = 0; i < totalWords; i++) dist[i] = 1e9;
+    dist[0] = 0;
+    int* parents[MAX_WORDS];
+    int parentSizes[MAX_WORDS] = {0};
+    int parentCaps[MAX_WORDS] = {0};
+    for (int i = 0; i < totalWords; i++) {
+        parents[i] = NULL;
+    }
+    int queue[MAX_WORDS * MAX_WORDS]; 
+    int head = 0, tail = 0;
+    queue[tail++] = 0; 
+    bool found = false;
+    while (head < tail) {
+        int levelSize = tail - head;
+        for (int i = 0; i < levelSize; i++) {
+            int curr = queue[head++];
+            if (curr == endIdx) {
+                found = true;
+                break;
+            }
+            for (int nxt = 0; nxt < totalWords; nxt++) {
+                if (isAdjacent(fullWordList[curr], fullWordList[nxt], wordLen)) {
+                    if (dist[nxt] >= dist[curr] + 1) {
+                        if (dist[nxt] == 1e9) {
+                            dist[nxt] = dist[curr] + 1;
+                            queue[tail++] = nxt;
+                        }
+                        if (parentSizes[nxt] >= parentCaps[nxt]) {
+                            parentCaps[nxt] = parentCaps[nxt] == 0 ? 4 : parentCaps[nxt] * 2;
+                            parents[nxt] = (int*)realloc(parents[nxt], parentCaps[nxt] * sizeof(int));
+                        }
+                        parents[nxt][parentSizes[nxt]++] = curr;
+                    }
+                }
+            }
+        }
+        if (found) break;
+    }
+    ResultList res = {NULL, 0, 0};
+    
+    if (found) {
+        char* currentPath[MAX_WORDS];
+        backtrack(endIdx, 0, fullWordList, parents, parentSizes, currentPath, 0, &res);
+    }
+    for (int i = 0; i < totalWords; i++) {
+        if (parents[i]) free(parents[i]);
+    }
+    *returnSize = res.size;
+    if (res.size == 0) {
+        *returnColumnSizes = NULL;
+        return NULL;
+    }
+    int* colSizes = (int*)malloc(res.size * sizeof(int));
+    int pathLength = dist[endIdx] + 1;
+    for (int i = 0; i < res.size; i++) {
+        colSizes[i] = pathLength;
+    }
+    *returnColumnSizes = colSizes;
+    
+    return res.paths;
+}
