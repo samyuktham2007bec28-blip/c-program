@@ -1,0 +1,73 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#define HASH_SIZE 10007
+typedef struct {
+    long long remainder;
+    int index;
+    bool used;
+} HashEntry;
+int getHash(long long rem) {
+    int h = rem % HASH_SIZE;
+    if (h < 0) h += HASH_SIZE;
+    return h;
+}
+void insertRemainder(HashEntry* table, long long rem, int idx) {
+    int h = getHash(rem);
+    while (table[h].used) {
+        if (table[h].remainder == rem) return;
+        h = (h + 1) % HASH_SIZE;
+    }
+    table[h].remainder = rem;
+    table[h].index = idx;
+    table[h].used = true;
+}
+int findRemainderIndex(HashEntry* table, long long rem) {
+    int h = getHash(rem);
+    while (table[h].used) {
+        if (table[h].remainder == rem) return table[h].index;
+        h = (h + 1) % HASH_SIZE;
+    }
+    return -1;
+}
+char* fractionToDecimal(int numerator, int denominator) {
+    if (numerator == 0) {
+        char* zero = (char*)malloc(2 * sizeof(char));
+        strcpy(zero, "0");
+        return zero;
+    }
+    char* res = (char*)malloc(10005 * sizeof(char));
+    int pos = 0;
+    if ((numerator < 0 ^ denominator < 0)) {
+        res[pos++] = '-';
+    }
+    long long num = labs((long long)numerator);
+    long long den = labs((long long)denominator);
+    pos += sprintf(res + pos, "%lld", num / den);
+    long long rem = num % den;
+    if (rem == 0) {
+        res[pos] = '\0';
+        return res; 
+    }
+    res[pos++] = '.';
+    HashEntry* table = (HashEntry*)calloc(HASH_SIZE, sizeof(HashEntry));
+    while (rem != 0) {
+        int existingIdx = findRemainderIndex(table, rem);
+        if (existingIdx != -1) {
+            int len = pos - existingIdx;
+            memmove(res + existingIdx + 1, res + existingIdx, len);
+            res[existingIdx] = '(';
+            pos++;
+            res[pos++] = ')';
+            break;
+        }
+        insertRemainder(table, rem, pos);
+        rem *= 10;
+        res[pos++] = (rem / den) + '0';
+        rem %= den;
+    }
+    res[pos] = '\0';
+    free(table);
+    return res;
+}
