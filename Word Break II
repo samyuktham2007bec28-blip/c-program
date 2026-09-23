@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+typedef struct {
+    char*** sentences;
+    int size;
+} MemoEntry;
+bool matches(const char* s, int start, int len, const char* word) {
+    if ((int)strlen(word) != len) return false;
+    return strncmp(s + start, word, len) == 0;
+}
+MemoEntry memo[21];
+bool memoized[21];
+MemoEntry dfs(char* s, int sLen, int start, char** wordDict, int wordDictSize) {
+    if (memoized[start]) {
+        return memo[start];
+    }
+    MemoEntry result = {NULL, 0};
+    int capacity = 0;
+    if (start == sLen) {
+        result.sentences = (char***)malloc(sizeof(char**));
+        result.sentences[0] = (char**)malloc(sizeof(char*));
+        result.sentences[0][0] = strdup(""); 
+        result.size = 1;
+        return result;
+    }
+    for (int i = start + 1; i <= sLen; i++) {
+        int len = i - start;
+        if (len > 10) continue; 
+        for (int k = 0; k < wordDictSize; k++) {
+            if (matches(s, start, len, wordDict[k])) {
+                MemoEntry subResult = dfs(s, sLen, i, wordDict, wordDictSize);
+                if (subResult.size > 0) {
+                    for (int m = 0; m < subResult.size; m++) {
+                        char* suffix = subResult.sentences[m][0];
+                        char* combined;
+                        if (strlen(suffix) == 0) {
+                            combined = strdup(wordDict[k]);
+                        } else {
+                            combined = (char*)malloc(len + 1 + strlen(suffix) + 1);
+                            sprintf(combined, "%s %s", wordDict[k], suffix);
+                        }
+                        if (result.size >= capacity) {
+                            capacity = capacity == 0 ? 4 : capacity * 2;
+                            result.sentences = (char***)realloc(result.sentences, capacity * sizeof(char**));
+                        }
+                        result.sentences[result.size] = (char**)malloc(sizeof(char*));
+                        result.sentences[result.size][0] = combined;
+                        result.size++;
+                    }
+                }
+            }
+        }
+    }
+    memo[start] = result;
+    memoized[start] = true;
+    return result;
+}
+char** wordBreak(char* s, char** wordDict, int wordDictSize, int* returnSize) {
+    int sLen = strlen(s);
+    memset(memoized, 0, sizeof(memoized));
+    memset(memo, 0, sizeof(memo));
+    MemoEntry finalResult = dfs(s, sLen, 0, wordDict, wordDictSize);
+    *returnSize = finalResult.size;
+    if (finalResult.size == 0) {
+        return NULL;
+    }
+    char** output = (char**)malloc(finalResult.size * sizeof(char*));
+    for (int i = 0; i < finalResult.size; i++) {
+        output[i] = finalResult.sentences[i][0];
+        free(finalResult.sentences[i]); 
+    }
+    free(finalResult.sentences);
+    for(int i = 1; i <= sLen; i++) {
+        if (memoized[i] && memo[i].size > 0) {
+            for(int j = 0; j < memo[i].size; j++) {
+                free(memo[i].sentences[j][0]);
+                free(memo[i].sentences[j]);
+            }
+            free(memo[i].sentences);
+        }
+    }
+    return output;
+}
