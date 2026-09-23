@@ -1,0 +1,97 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+typedef struct Node {
+    int key;
+    int val;
+    struct Node* prev;
+    struct Node* next;
+} Node;
+typedef struct {
+    int capacity;
+    int size;
+    Node* head;
+    Node* tail;
+    Node* map[10001]; 
+} LRUCache;
+Node* createNode(int key, int val) {
+    Node* node = (Node*)malloc(sizeof(Node));
+    node->key = key;
+    node->val = val;
+    node->prev = NULL;
+    node->next = NULL;
+    return node;
+}
+void removeNode(LRUCache* obj, Node* node) {
+    if (node->prev != NULL) {
+        node->prev->next = node->next;
+    } else {
+        obj->head = node->next; 
+    }
+    if (node->next != NULL) {
+        node->next->prev = node->prev;
+    } else {
+        obj->tail = node->prev;
+    }
+}
+void insertAtHead(LRUCache* obj, Node* node) {
+    node->next = obj->head;
+    node->prev = NULL;
+    if (obj->head != NULL) {
+        obj->head->prev = node;
+    }
+    obj->head = node;
+    if (obj->tail == NULL) {
+        obj->tail = node; 
+    }
+}
+void moveToHead(LRUCache* obj, Node* node) {
+    removeNode(obj, node);
+    insertAtHead(obj, node);
+}
+LRUCache* lRUCacheCreate(int capacity) {
+    LRUCache* cache = (LRUCache*)malloc(sizeof(LRUCache));
+    cache->capacity = capacity;
+    cache->size = 0;
+    cache->head = NULL;
+    cache->tail = NULL;
+    memset(cache->map, 0, sizeof(cache->map));
+    return cache;
+}
+int lRUCacheGet(LRUCache* obj, int key) {
+    Node* node = obj->map[key];
+    if (node == NULL) {
+        return -1;
+    }
+    moveToHead(obj, node);
+    return node->val;
+}
+void lRUCachePut(LRUCache* obj, int key, int value) {
+    Node* node = obj->map[key];
+    if (node != NULL) {
+        node->val = value;
+        moveToHead(obj, node);
+    } else {
+        Node* newNode = createNode(key, value);
+        obj->map[key] = newNode;
+        insertAtHead(obj, newNode);
+        obj->size++;
+        if (obj->size > obj->capacity) {
+            Node* lruNode = obj->tail;
+            obj->map[lruNode->key] = NULL; 
+            removeNode(obj, lruNode);     
+            free(lruNode);                
+            obj->size--;
+        }
+    }
+}
+void lRUCacheFree(LRUCache* obj) {
+    Node* curr = obj->head;
+    while (curr != NULL) {
+        Node* nextNode = curr->next;
+        free(curr);
+        curr = nextNode;
+    }
+    free(obj);
+}
+
