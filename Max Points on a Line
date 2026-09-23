@@ -1,0 +1,69 @@
+#include <stdio.h>
+#include <stdlib.h>
+typedef struct {
+    int dx;
+    int dy;
+} Slope;
+int gcd(int a, int b) {
+    while (b != 0) {
+        int temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a;
+}
+int compareSlopes(const void* a, const void* b) {
+    Slope* s1 = (Slope*)a;
+    Slope* s2 = (Slope*)b;
+    long long diff = (long long)s1->dy * s2->dx - (long long)s2->dy * s1->dx;
+    if (diff < 0) return -1;
+    if (diff > 0) return 1;
+    return 0;
+}
+int maxPoints(int** points, int pointsSize, int* pointsColSize) {
+    if (pointsSize <= 2) {
+        return pointsSize;
+    }
+    int maxGlobal = 2;
+    Slope* slopes = (Slope*)malloc(pointsSize * sizeof(Slope));
+    for (int i = 0; i < pointsSize; i++) {
+        int slopeCount = 0;
+        for (int j = 0; j < pointsSize; j++) {
+            if (i == j) continue;
+            int dx = points[j][0] - points[i][0];
+            int dy = points[j][1] - points[i][1];
+            int g = gcd(dx, dy);
+            dx /= g;
+            dy /= g;
+            if (dx < 0 || (dx == 0 && dy < 0)) {
+                dx = -dx;
+                dy = -dy;
+            }
+            slopes[slopeCount].dx = dx;
+            slopes[slopeCount].dy = dy;
+            slopeCount++;
+        }
+        qsort(slopes, slopeCount, sizeof(Slope), compareSlopes);
+        int currentMax = 1; 
+        int runningCount = 1;
+        for (int k = 1; k < slopeCount; k++) {
+            if (slopes[k].dx == slopes[k - 1].dx && slopes[k].dy == slopes[k - 1].dy) {
+                runningCount++;
+            } else {
+                if (runningCount > currentMax) {
+                    currentMax = runningCount;
+                }
+                runningCount = 1;
+            }
+        }
+        if (runningCount > currentMax) {
+            currentMax = runningCount;
+        }
+        int totalPointsOnLine = currentMax + 1;
+        if (totalPointsOnLine > maxGlobal) {
+            maxGlobal = totalPointsOnLine;
+        }
+    }
+    free(slopes);
+    return maxGlobal;
+}
