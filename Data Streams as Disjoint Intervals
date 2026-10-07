@@ -1,0 +1,106 @@
+#include <stdlib.h>
+#include <stdbool.h>
+
+typedef struct {
+    int start;
+    int end;
+} Interval;
+
+typedef struct {
+    Interval* intervals;
+    int size;
+    int capacity;
+} SummaryRanges;
+
+SummaryRanges* summaryRangesCreate() {
+    SummaryRanges* obj = (SummaryRanges*)malloc(sizeof(SummaryRanges));
+    obj->capacity = 128;
+    obj->size = 0;
+    obj->intervals = (Interval*)malloc(obj->capacity * sizeof(Interval));
+    return obj;
+}
+
+// Binary search to find the first interval where interval.start >= value
+int binarySearch(SummaryRanges* obj, int value) {
+    int low = 0;
+    int high = obj->size - 1;
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        if (obj->intervals[mid].start == value) {
+            return mid;
+        } else if (obj->intervals[mid].start < value) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return low;
+}
+
+void summaryRangesAddNum(SummaryRanges* obj, int value) {
+    int idx = binarySearch(obj, value);
+    
+    // 1. Check if value is already covered by the interval to the left
+    if (idx > 0 && obj->intervals[idx - 1].end >= value) {
+        return;
+    }
+    
+    // 2. Check if value is already covered by the current interval (exact match or inside)
+    if (idx < obj->size && obj->intervals[idx].start <= value && obj->intervals[idx].end >= value) {
+        return;
+    }
+    
+    // Check merge conditions
+    bool mergeLeft = (idx > 0 && obj->intervals[idx - 1].end + 1 == value);
+    bool mergeRight = (idx < obj->size && value + 1 == obj->intervals[idx].start);
+    
+    if (mergeLeft && mergeRight) {
+        // Connects both intervals together
+        obj->intervals[idx - 1].end = obj->intervals[idx].end;
+        for (int i = idx; i < obj->size - 1; i++) {
+            obj->intervals[i] = obj->intervals[i + 1];
+        }
+        obj->size--;
+    } else if (mergeLeft) {
+        // Extends the left interval forward
+        obj->intervals[idx - 1].end = value;
+    } else if (mergeRight) {
+        // Extends the right interval backward
+        obj->intervals[idx].start = value;
+    } else {
+        // Insert a new standalone interval [value, value]
+        if (obj->size >= obj->capacity) {
+            obj->capacity *= 2;
+            obj->intervals = (Interval*)realloc(obj->intervals, obj->capacity * sizeof(Interval));
+        }
+        for (int i = obj->size; i > idx; i--) {
+            obj->intervals[i] = obj->intervals[i - 1];
+        }
+        obj->intervals[idx].start = value;
+        obj->intervals[idx].end = value;
+        obj->size++;
+    }
+}
+
+int** summaryRangesGetIntervals(SummaryRanges* obj, int* returnSize, int** returnColumnSizes) {
+    *returnSize = obj->size;
+    
+    int** result = (int**)malloc(obj->size * sizeof(int*));
+    *returnColumnSizes = (int*)malloc(obj->size * sizeof(int));
+    
+    for (int i = 0; i < obj->size; i++) {
+        result[i] = (int*)malloc(2 * sizeof(int));
+        result[i][0] = obj->intervals[i].start;
+        result[i][1] = obj->intervals[i].end;
+        (*returnColumnSizes)[i] = 2;
+    }
+    
+    return result;
+}
+
+void summaryRangesFree(SummaryRanges* obj) {
+    if (obj) {
+        free(obj->intervals);
+        free(obj);
+    }
+}
