@@ -1,0 +1,141 @@
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
+#define MAX_USERS 501
+#define MAX_TWEETS_PER_USER 100 
+
+typedef struct {
+    int tweetId;
+    int timestamp;
+} Tweet;
+
+typedef struct {
+    int globalTime;
+    bool followMap[MAX_USERS][MAX_USERS]; 
+    Tweet userTweets[MAX_USERS][MAX_TWEETS_PER_USER];
+    int tweetCount[MAX_USERS];
+} Twitter;
+
+// Node structure for our Max-Heap
+typedef struct {
+    Tweet tweet;
+    int userId;
+    int nextTweetIdx; // Track the next tweet index to pull for this user
+} HeapNode;
+
+Twitter* twitterCreate() {
+    Twitter* obj = (Twitter*)malloc(sizeof(Twitter));
+    obj->globalTime = 0;
+    memset(obj->followMap, 0, sizeof(obj->followMap));
+    memset(obj->tweetCount, 0, sizeof(obj->tweetCount));
+    return obj;
+}
+
+void twitterPostTweet(Twitter* obj, int userId, int tweetId) {
+    int count = obj->tweetCount[userId];
+    
+    // Shift left to maintain only the most recent tweets if the buffer fills up
+    if (count >= MAX_TWEETS_PER_USER) {
+        for (int i = 1; i < MAX_TWEETS_PER_USER; i++) {
+            obj->userTweets[userId][i - 1] = obj->userTweets[userId][i];
+        }
+        count = MAX_TWEETS_PER_USER - 1;
+    }
+    
+    obj->userTweets[userId][count].tweetId = tweetId;
+    obj->userTweets[userId][count].timestamp = obj->globalTime++;
+    obj->tweetCount[userId] = count + 1;
+}
+
+// Standard max-heapify helper function
+void maxHeapify(HeapNode* heap, int heapSize, int i) {
+    int largest = i;
+    int left = 2 * i + 1;
+    int right = 2 * i + 2;
+    
+    if (left < heapSize && heap[left].tweet.timestamp > heap[largest].tweet.timestamp)
+        largest = left;
+    if (right < heapSize && heap[right].tweet.timestamp > heap[largest].tweet.timestamp)
+        largest = right;
+    
+    if (largest != i) {
+        HeapNode temp = heap[i];
+        heap[i] = heap[largest];
+        heap[largest] = temp;
+        maxHeapify(heap, heapSize, largest);
+    }
+}
+
+int* twitterGetNewsFeed(Twitter* obj, int userId, int* returnSize) {
+    // Max size of the heap is bounded by total possible unique followees + 1 (self)
+    HeapNode heap[MAX_USERS];
+    int heapSize = 0;
+    
+    // 1. Insert the user's latest tweet if it exists
+    if (obj->tweetCount[userId] > 0) {
+        int idx = obj->tweetCount[userId] - 1;
+        heap[heapSize].tweet = obj->userTweets[userId][idx];
+        heap[heapSize].userId = userId;
+        heap[heapSize].nextTweetIdx = idx - 1;
+        heapSize++;
+    }
+    
+    // 2. Insert the latest tweet from each followed user
+    for (int followeeId = 1; followeeId < MAX_USERS; followeeId++) {
+        if (obj->followMap[userId][followeeId] && followeeId != userId) {
+            if (obj->tweetCount[followeeId] > 0) {
+                int idx = obj->tweetCount[followeeId] - 1;
+                heap[heapSize].tweet = obj->userTweets[followeeId][idx];
+                heap[heapSize].userId = followeeId;
+                heap[heapSize].nextTweetIdx = idx - 1;
+                heapSize++;
+            }
+        }
+    }
+    
+    // Build the Max-Heap
+    for (int i = (heapSize / 2) - 1; i >= 0; i--) {
+        maxHeapify(heap, heapSize, i);
+    }
+    
+    // 3. Extract up to 10 newest tweets sequentially
+    int* feed = (int*)malloc(10 * sizeof(int));
+    int count = 0;
+    
+    while (heapSize > 0 && count < 10) {
+        // Top of heap is the latest tweet
+        HeapNode root = heap[0];
+        feed[count++] = root.tweet.tweetId;
+        
+        // If this user has older tweets left, replace the root with their next one
+        if (root.nextTweetIdx >= 0) {
+            heap[0].tweet = obj->userTweets[root.userId][root.nextTweetIdx];
+            heap[0].userId = root.userId;
+            heap[0].nextTweetIdx = root.nextTweetIdx - 1;
+        } else {
+            // Otherwise, replace root with the last element of the heap
+            heap[0] = heap[heapSize - 1];
+            heapSize--;
+        }
+        // Restore heap property
+        maxHeapify(heap, heapSize, 0);
+    }
+    
+    *returnSize = count;
+    return feed;
+}
+
+void twitterFollow(Twitter* obj, int followerId, int followeeId) {
+    if (followerId != followeeId) {
+        obj->followMap[followerId][followeeId] = true;
+    }
+}
+
+void twitterUnfollow(Twitter* obj, int followerId, int followeeId) {
+    obj->followMap[followerId][followeeId] = false;
+}
+
+void twitterFree(Twitter* obj) {
+    free(obj);
+}
